@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "com.arconyx.chiselledenchanting.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"ExampleClientMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

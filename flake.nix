@@ -12,7 +12,7 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [ kotlin ];
+          nativeBuildInputs = with pkgs; [ jdk21 ];
         };
       }
     );

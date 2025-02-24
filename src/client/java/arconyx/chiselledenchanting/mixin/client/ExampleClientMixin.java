@@ -1,4 +1,4 @@
-package com.arconyx.chiselledenchanting.mixin.client;
+package arconyx.chiselledenchanting.mixin.client;
 
 import net.minecraft.client.MinecraftClient;
 import org.spongepowered.asm.mixin.Mixin;

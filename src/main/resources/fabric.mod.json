@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "chiselled-enchanting",
 	"version": "${version}",
-	"name": "chiselled-enchanting",
+	"name": "Chiselled Enchanting",
 	"description": "This is an example description! Tell everyone what your mod is about!",
 	"authors": [
 		"Me!"
@@ -16,16 +16,10 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			{
-				"value": "com.arconyx.chiselledenchanting.Chiselledenchanting",
-				"adapter": "kotlin"
-			}
+			"arconyx.chiselledenchanting.ChiselledEnchanting"
 		],
 		"client": [
-			{
-				"value": "com.arconyx.chiselledenchanting.ChiselledenchantingClient",
-				"adapter": "kotlin"
-			}
+			"arconyx.chiselledenchanting.ChiselledEnchantingClient"
 		]
 	},
 	"mixins": [
@@ -37,10 +31,9 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.16.10",
-		"minecraft": "~1.21.4",
-		"java": ">=21",
-		"fabric-api": "*",
-		"fabric-language-kotlin": "*"
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
 	},
 	"suggests": {
 		"another-mod": "*"

@@ -1,10 +1,12 @@
 package arconyx.enchanterslibrary.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.ChiseledBookshelfBlockEntity;
+import net.minecraft.enchantment.EnchantmentLevelEntry;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.EnchantmentScreenHandler;
 import net.minecraft.util.math.BlockPos;
@@ -16,6 +18,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+
+import java.util.List;
 
 @Mixin(EnchantmentScreenHandler.class)
 public abstract class EnchantingScreenHandlerMixin {
@@ -68,5 +72,10 @@ public abstract class EnchantingScreenHandlerMixin {
 		// we reduce the power by one because EnchantmentScreenHandler adds 1 inside the loop
 //		ipower--; // enabling this actually breaks things for some reason
 		return power;
+	}
+
+	@WrapMethod(method = "generateEnchantments")
+	public List<EnchantmentLevelEntry> improveEnchantmentLevel(ItemStack stack, int slot, int level, Operation<List<EnchantmentLevelEntry>> original) {
+		return original.call(stack, slot, level * 3 / 2);
 	}
 }

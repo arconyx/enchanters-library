@@ -12,7 +12,10 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [ jdk21 ];
+          nativeBuildInputs = with pkgs; [ jdk21 libglvnd ];
+          shellHook = ''
+              export LD_LIBRARY_PATH="''${LD_LIBRARY_PATH}''${LD_LIBRARY_PATH:+:}${pkgs.libglvnd}/lib"
+            '';
         };
       }
     );

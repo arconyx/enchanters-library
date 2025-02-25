@@ -3,7 +3,7 @@
 	"package": "arconyx.chiselledenchanting.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
-		"ExampleMixin"
+		"ChiselledEnchantingScreenHandlerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

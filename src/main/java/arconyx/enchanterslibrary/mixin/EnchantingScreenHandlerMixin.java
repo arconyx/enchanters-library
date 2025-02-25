@@ -99,7 +99,7 @@ public abstract class EnchantingScreenHandlerMixin {
 		int power = filledSlots / 3;
 		log.info("Power at {} is {} (from {} filled slots)", powerBlockPos, power, filledSlots);
 		// we reduce the power by one because EnchantmentScreenHandler adds 1 inside the loop
-//		ipower--; // enabling this actually breaks things for some reason - I don't think the chiseled bookshelf has the right tag
+		power--;
 		return power;
 	}
 

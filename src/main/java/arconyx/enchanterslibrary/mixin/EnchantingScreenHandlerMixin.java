@@ -38,6 +38,7 @@ public abstract class EnchantingScreenHandlerMixin {
 		return power + dp;
 	}
 
+	// Used for debug logging
 	@WrapOperation(method = "method_17411", at = @At(value = "INVOKE", target = "Lnet/minecraft/enchantment/EnchantmentHelper;calculateRequiredExperienceLevel(Lnet/minecraft/util/math/random/Random;IILnet/minecraft/item/ItemStack;)I"))
 	public int getPower(Random random, int slotIndex, int bookshelfCount, ItemStack stack, Operation<Integer> original) {
 		log.info("Final bookshelf count is {}", bookshelfCount);

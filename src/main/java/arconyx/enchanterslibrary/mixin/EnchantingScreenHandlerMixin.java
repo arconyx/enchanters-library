@@ -81,20 +81,15 @@ public abstract class EnchantingScreenHandlerMixin {
 		BlockPos powerBlockPos = tablePos.add(providerOffset);
         log.debug("Checking block at {}", powerBlockPos);
 		BlockEntity powerBlockEntity = world.getBlockEntity(powerBlockPos);
-		if (powerBlockEntity == null) {
-			log.debug("No block entity here (block is {})", world.getBlockState(powerBlockPos).getBlock());
-			return 0;
-		} else if (!(powerBlockEntity instanceof ChiseledBookshelfBlockEntity)) {
-			log.debug("Block is not a chiseled bookshelf (block is {})", world.getBlockState(powerBlockPos).getBlock());
-			return 0;
+		if (powerBlockEntity instanceof ChiseledBookshelfBlockEntity bookshelf) {
+			int filledSlots = bookshelf.size() - bookshelf.getOpenSlotCount();
+			int power = filledSlots / 3;
+			log.debug("Power at {} is {} (from {} filled slots)", powerBlockPos, power, filledSlots);
+			// we reduce the power by one because EnchantmentScreenHandler adds 1 inside the loop
+			return power - 1;
 		}
-		ChiseledBookshelfBlockEntity bookshelf = (ChiseledBookshelfBlockEntity) powerBlockEntity;
-		int filledSlots = bookshelf.size() - bookshelf.getOpenSlotCount();
-		int power = filledSlots / 3;
-		log.info("Power at {} is {} (from {} filled slots)", powerBlockPos, power, filledSlots);
-		// we reduce the power by one because EnchantmentScreenHandler adds 1 inside the loop
-		power--;
-		return power;
+		log.debug("Block is not a chiseled bookshelf (block is {})", world.getBlockState(powerBlockPos).getBlock());
+		return 0;
 	}
 
 	/**

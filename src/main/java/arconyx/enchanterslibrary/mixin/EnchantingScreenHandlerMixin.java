@@ -5,8 +5,6 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.ChiseledBookshelfBlockEntity;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.EnchantmentScreenHandler;
 import net.minecraft.util.math.BlockPos;
@@ -18,8 +16,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-
-import java.util.Map;
 
 @Mixin(EnchantmentScreenHandler.class)
 public abstract class EnchantingScreenHandlerMixin {
@@ -61,31 +57,15 @@ public abstract class EnchantingScreenHandlerMixin {
 			return 0;
 		}
 		ChiseledBookshelfBlockEntity bookshelf = (ChiseledBookshelfBlockEntity) powerBlockEntity;
-		float power = 0;
+		int filledSlots = 0;
 		for (int slot = 0; slot < 6; slot++) {
 			ItemStack stack = bookshelf.getStack(slot);
-			float dp = powerFromStack(stack);
-			power += dp;
-			if (dp > 0) {
-				log.info("Slot {} contains {} with power {}", slot, stack.getItem(), dp);
-			}
+			if (!stack.isEmpty()) { filledSlots++; }
 		}
-		int ipower = (int) power;
-		log.info("Power at {} is {} (from {})", powerBlockPos, ipower, power);
-//		ipower--; // we reduce the power by one because EnchantmentScreenHandler adds 1 inside the loop
-		return ipower;
-	}
-
-	@Unique
-	protected float powerFromStack(ItemStack stack) {
-		Map<Enchantment, Integer> enchantments = EnchantmentHelper.get(stack);
-		float power = 0;
-		for (var entry: enchantments.entrySet()) {
-			float dp = (float) entry.getValue() / entry.getKey().getMaxLevel();
-			power += dp;
-			log.info("Enchantment {} has power {}", entry.getKey(), dp);
-		}
-
+		int power = filledSlots / 3;
+		log.info("Power at {} is {} (from {} filled slots)", powerBlockPos, power, filledSlots);
+		// we reduce the power by one because EnchantmentScreenHandler adds 1 inside the loop
+//		ipower--; // enabling this actually breaks things for some reason
 		return power;
-    }
+	}
 }

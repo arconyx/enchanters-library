@@ -29,9 +29,8 @@ public abstract class EnchantingScreenHandlerMixin {
 
 	/**
 	 * Update the running total of bookshelves in range of an enchanting table.
-	 * This is called for every potential block, after the conditional in the if statement.
-	 * This occurs even if the condition returns false so the operations must be safe to run on
-	 * arbitrary blocks or air.
+	 * This is called for block in the region around the table that passes the
+	 * <code>EnchantingTableBlock.canAccessPowerProvider</code> check
 	 *
 	 * @param power     the current value of the running total variable
 	 * @param world     the world
@@ -45,10 +44,12 @@ public abstract class EnchantingScreenHandlerMixin {
 			at = @At(
 					value = "INVOKE",
 					target = "Lnet/minecraft/block/EnchantingTableBlock;canAccessPowerProvider(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/util/math/BlockPos;)Z",
-					shift = At.Shift.AFTER
+					shift = At.Shift.BY, // shift into the true branch of the if statement
+					by = 2 // CHECK THIS IN THE BYTECODE AFTER EVERY MINECRAFT UPDATE
 			)
 	)
 	public int modifyPower(int power, ItemStack itemStack, World world, BlockPos pos, @Local(ordinal = 1) BlockPos blockPos) {
+		log.debug("Called for block {}", pos.add(blockPos));
 		int dp = powerFromBlock(world, pos, blockPos);
 		return power + dp;
 	}
@@ -65,13 +66,10 @@ public abstract class EnchantingScreenHandlerMixin {
 	 * Because the loop in the original code adds 1 to the total for every block in
 	 * #minecraft:enchanted_power_provider we must adjust our value so we don't double count things.
 	 * <ul>
-	 *   <li>For blocks that aren't in the tag we can return 0 because the loop will be skipping it</li>
-	 * 	 <li>For blocks that are in the tag we must subtract one to cancel out the loop</li>
+	 *   <li>For blocks we ignore, like regular bookshelves, we can just return zero</li>
+	 * 	 <li>For blocks where we want to override the contribution, like chiseled bookshelves, we must subtract one
+	 * 	 to cancel out the original loop.</li>
 	 * </ul>
-	 * <p>In theory, we can also have blocks that contribute here (by returning >0) but aren't in the tag list. But that's
-	 * dumb, and they won't show glyphs to the player. Don't do that, just add it to the tag.</p>
-	 * <p>If you really want to do it you can just return the value without subtracting anything because the loop
-	 * is ignoring it.</p>
 	 *
 	 * @param world the world
 	 * @param tablePos position of the enchanting table
@@ -79,7 +77,7 @@ public abstract class EnchantingScreenHandlerMixin {
 	 * @return the amount this block contributes to the bookshelf count, relative to the default
 	 */
 	@Unique
-	protected int powerFromBlock(World world, BlockPos tablePos, BlockPos providerOffset) {
+	private int powerFromBlock(World world, BlockPos tablePos, BlockPos providerOffset) {
 		BlockPos powerBlockPos = tablePos.add(providerOffset);
         log.debug("Checking block at {}", powerBlockPos);
 		BlockEntity powerBlockEntity = world.getBlockEntity(powerBlockPos);

@@ -1,4 +1,4 @@
-package arconyx.chiselledenchanting.mixin;
+package arconyx.enchanterslibrary.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -22,10 +22,10 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import java.util.Map;
 
 @Mixin(EnchantmentScreenHandler.class)
-public abstract class ChiselledEnchantingScreenHandlerMixin {
+public abstract class EnchantingScreenHandlerMixin {
 
 	@Unique
-	private static final Logger log = LoggerFactory.getLogger(ChiselledEnchantingScreenHandlerMixin.class);
+	private static final Logger log = LoggerFactory.getLogger(EnchantingScreenHandlerMixin.class);
 
 	// FIX: Fires regardless of whether if statement is true or false
 	// FIX: Seems to fire three times for every block?!

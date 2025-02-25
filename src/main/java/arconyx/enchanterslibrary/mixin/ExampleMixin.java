@@ -1,4 +1,4 @@
-package arconyx.chiselledenchanting.mixin;
+package arconyx.enchanterslibrary.mixin;
 
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;

@@ -1,12 +1,12 @@
-package arconyx.chiselledenchanting;
+package arconyx.enchanterslibrary;
 
 import net.fabricmc.api.ModInitializer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ChiselledEnchanting implements ModInitializer {
-	public static final String MOD_ID = "chiselled-enchanting";
+public class EnchantersLibrary implements ModInitializer {
+	public static final String MOD_ID = "enchanters-library";
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.

@@ -1,31 +1,30 @@
 {
 	"schemaVersion": 1,
-	"id": "chiselled-enchanting",
+	"id": "enchanters-library",
 	"version": "${version}",
-	"name": "Chiselled Enchanting",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"name": "Enchanter's Library",
+	"description": "Add interactions between chiselled bookshelves and enchanting tables.",
 	"authors": [
-		"Me!"
+		"ArcOnyx"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/arconyx/enchanters-library"
 	},
-	"license": "CC0-1.0",
-	"icon": "assets/chiselled-enchanting/icon.png",
+	"license": "MIT",
+	"icon": "assets/enchanters-library/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"arconyx.chiselledenchanting.ChiselledEnchanting"
+			"arconyx.enchanterslibrary.EnchantersLibrary"
 		],
 		"client": [
-			"arconyx.chiselledenchanting.ChiselledEnchantingClient"
+			"arconyx.enchanterslibrary.EnchantersLibraryClient"
 		]
 	},
 	"mixins": [
-		"chiselled-enchanting.mixins.json",
+		"enchanters-library.mixins.json",
 		{
-			"config": "chiselled-enchanting.client.mixins.json",
+			"config": "enchanters-library.client.mixins.json",
 			"environment": "client"
 		}
 	],

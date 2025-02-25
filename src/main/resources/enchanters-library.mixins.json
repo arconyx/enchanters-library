@@ -1,9 +1,9 @@
 {
 	"required": true,
-	"package": "arconyx.chiselledenchanting.mixin",
+	"package": "arconyx.enchanterslibrary.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
-		"ChiselledEnchantingScreenHandlerMixin"
+		"EnchantingScreenHandlerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

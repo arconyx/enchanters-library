@@ -191,15 +191,17 @@ public abstract class EnchantmentScreenHandlerMixin {
 		// This is the custom stuff
 
 		// This filters enchantments by compatibility and then counts the number of occurrences of an enchantment/level
-		// pairing. We operate on Map.Entry objects because they have reasonable equality logic defined and EnchantedLevelEntries
-		// don't.
+		// pairing. We operate on Map.Entry objects because they have reasonable equality logic defined and EnchantedLevelEntries don't.
 		// It might be more efficient to apply the filter when constructing the initial list but this seems cleaner
+		// The weight is currently equal to the sqrt of the number of books present with that enchantment and level.
 		var additionalEnchantmentsCount = this.nearbyEnchantments.stream()
 				.filter(enchantmentLevelEntry -> enchantmentLevelEntry.getKey().isAcceptableItem(stack))
 				.collect(Collectors.groupingBy(entry -> entry, Collectors.counting()));
 
 		List<WeightedEnchantmentLevelEntry> additionalEnchantments = additionalEnchantmentsCount.entrySet().stream().map(
-				entry -> new WeightedEnchantmentLevelEntry(entry.getKey(), entry.getValue().intValue())
+				entry -> new WeightedEnchantmentLevelEntry(
+						entry.getKey(), Double.valueOf(Math.sqrt(entry.getValue())).intValue()
+				)
 		).toList();
 
 		additionalEnchantments.forEach(entry -> log.debug("Entry has enchantment {} with weight {}", entry.enchantment.getName(entry.level), entry.getWeight()));

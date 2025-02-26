@@ -1,5 +1,6 @@
 package arconyx.enchanterslibrary.mixin;
 
+import arconyx.enchanterslibrary.WeightedEnchantmentLevelEntry;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -13,12 +14,12 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.EnchantmentScreenHandler;
 import net.minecraft.screen.ScreenHandlerContext;
+import net.minecraft.util.Util;
 import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
-import org.apache.commons.compress.utils.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Final;
@@ -26,10 +27,15 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -41,6 +47,18 @@ public abstract class EnchantmentScreenHandlerMixin {
 
 	@Unique
 	private static final Logger log = LoggerFactory.getLogger(EnchantmentScreenHandlerMixin.class);
+
+	@Unique
+	private final List<EnchantmentLevelEntry> nearbyEnchantments = new ArrayList<>();
+
+	/**
+	 * Reset the nearby enchantments list before {@link EnchantmentScreenHandlerMixin#modifyPower(int, ItemStack, World, BlockPos, BlockPos)}
+	 * starts modifying it.
+	 */
+	@Inject(method = "method_17411", at = @At(value = "HEAD"))
+	public void clearNearbyEnchantments(ItemStack itemStack, World world, BlockPos pos, CallbackInfo ci) {
+		nearbyEnchantments.clear();
+	}
 
 	/**
 	 * Update the running total of bookshelves in range of an enchanting table.
@@ -65,14 +83,14 @@ public abstract class EnchantmentScreenHandlerMixin {
 	)
 	public int modifyPower(int power, ItemStack itemStack, World world, BlockPos pos, @Local(ordinal = 1) BlockPos blockPos) {
 		log.debug("Called for block {}", pos.add(blockPos));
-		int dp = powerFromBlock(world, pos, blockPos);
+		int dp = getPowerFromBlock(world, pos, blockPos);
 		return power + dp;
 	}
 
 	// Used for debug logging
 	@WrapOperation(method = "method_17411", at = @At(value = "INVOKE", target = "Lnet/minecraft/enchantment/EnchantmentHelper;calculateRequiredExperienceLevel(Lnet/minecraft/util/math/random/Random;IILnet/minecraft/item/ItemStack;)I"))
 	public int getPower(Random random, int slotIndex, int bookshelfCount, ItemStack stack, Operation<Integer> original) {
-		log.info("Final bookshelf count is {}", bookshelfCount);
+		log.debug("Final bookshelf count is {}", bookshelfCount);
 		return original.call(random, slotIndex, bookshelfCount, stack);
 	}
 
@@ -92,7 +110,7 @@ public abstract class EnchantmentScreenHandlerMixin {
 	 * @return the amount this block contributes to the bookshelf count, relative to the default
 	 */
 	@Unique
-	private int powerFromBlock(World world, BlockPos tablePos, BlockPos providerOffset) {
+	private int getPowerFromBlock(World world, BlockPos tablePos, BlockPos providerOffset) {
 		BlockPos powerBlockPos = tablePos.add(providerOffset);
         log.debug("Checking block at {}", powerBlockPos);
 		BlockEntity powerBlockEntity = world.getBlockEntity(powerBlockPos);
@@ -100,6 +118,9 @@ public abstract class EnchantmentScreenHandlerMixin {
 			int filledSlots = bookshelf.getOpenSlotCount();
 			int power = filledSlots / 3;
 			log.debug("Power at {} is {} (from {} filled slots)", powerBlockPos, power, filledSlots);
+			if (filledSlots > 0) {
+				this.nearbyEnchantments.addAll(getEnchantmentsAtBlock(bookshelf).toList());
+			}
 			// we reduce the power by one because EnchantmentScreenHandler adds 1 inside the loop
 			return power - 1;
 		}
@@ -122,19 +143,11 @@ public abstract class EnchantmentScreenHandlerMixin {
 	}
 
 	@Unique
-	private Stream<EnchantmentLevelEntry> nearbyEnchantments(World world, BlockPos tablePosition) {
-		var enchantments = EnchantingTableBlock.POWER_PROVIDER_OFFSETS.stream().unordered()
-				.filter(
-						offset -> EnchantingTableBlock.canAccessPowerProvider(world, tablePosition, offset)
-				)
-				.map(blockPos -> world.getBlockEntity(tablePosition.add(blockPos)))
-				.filter(ChiseledBookshelfBlockEntity.class::isInstance)
-				.map(ChiseledBookshelfBlockEntity.class::cast)
-				.flatMap(bookshelf -> IntStream.range(0, bookshelf.size())
-						.mapToObj(bookshelf::getStack)
-						.flatMap(itemStack -> EnchantmentHelper.get(itemStack).entrySet().stream())
-				).map(enchantmentLevelPair -> new EnchantmentLevelEntry(enchantmentLevelPair.getKey(), enchantmentLevelPair.getValue()));
-		return enchantments;
+	private Stream<EnchantmentLevelEntry> getEnchantmentsAtBlock(ChiseledBookshelfBlockEntity bookshelf) {
+		return IntStream.range(0, bookshelf.size())
+				.mapToObj(bookshelf::getStack)
+				.flatMap(itemStack -> EnchantmentHelper.get(itemStack).entrySet().stream())
+				.map(enchantmentLevelPair -> new EnchantmentLevelEntry(enchantmentLevelPair.getKey(), enchantmentLevelPair.getValue()));
 	}
 
 	/**
@@ -160,9 +173,8 @@ public abstract class EnchantmentScreenHandlerMixin {
 		Item item = stack.getItem();
 		int enchantability = item.getEnchantability();
 		if (enchantability <= 0) {
-			return Lists.newArrayList();
+			return new ArrayList<>();
 		}
-		;
 
 		// modify enchantment level based on enchantability
 		int upperBound = enchantability / 4 + 1;
@@ -179,36 +191,49 @@ public abstract class EnchantmentScreenHandlerMixin {
 
 		// THIS IS WHERE WE INSERT CUSTOM STUFF
 		// REMEMBER TO CHECK ENCHANTMENTS FOR COMPATIBILITY
-		this.context.run((World world, BlockPos tablePos) -> {
-			var additionalEnchantments = nearbyEnchantments(world, tablePos);
 
-			additionalEnchantments.forEach(enchantmentLevelPair -> {
+		// TODO: We might have some problems with equals not being defined for EnchantmentLevelEntry
+		Map<EnchantmentLevelEntry, Integer> additionalEnchantmentCounts = new HashMap<>();
+		this.nearbyEnchantments.stream()
+				// It might be more efficient to apply the filter when constructing the initial list
+				// But this seems cleaner
+				.filter(enchantmentLevelEntry -> enchantmentLevelEntry.enchantment.isAcceptableItem(stack))
+				// count how many times each distinct enchantment/level combination occurs
+				.forEach(entry -> {
+					int old = additionalEnchantmentCounts.getOrDefault(entry, 0);
+					additionalEnchantmentCounts.replace(entry, old + 1);
+				});
 
-			});
+		List<WeightedEnchantmentLevelEntry> additionalEnchantments = additionalEnchantmentCounts.entrySet().stream()
+				.map(entryCountPair -> new WeightedEnchantmentLevelEntry(
+								entryCountPair.getKey(),
+								entryCountPair.getValue()
+						)
+				).toList();
 
-			// Done with the custom stuff
-			// If we have no possible enchantments return an empty list
+		possibleEnchantments.addAll(additionalEnchantments);
+
+		// Done with the custom stuff
+		// If we have no possible enchantments return an empty list
+		if (possibleEnchantments.isEmpty()) {
+			return possibleEnchantments;
+		}
+
+		// Select first enchantment
+		List<EnchantmentLevelEntry> selectedEnchantments = new ArrayList<>();
+		Weighting.getRandom(random, possibleEnchantments).ifPresent(selectedEnchantments::add);
+
+		// Iteratively add more enchantments until we run out or get unlucky
+		while (random.nextInt(50) < (finalLevel + 1)) {
+			// I don't think we need to check for emptiness here because the iterator will just return immediately
+			EnchantmentHelper.removeConflicts(possibleEnchantments, Util.getLast(selectedEnchantments));
 			if (possibleEnchantments.isEmpty()) {
-				return possibleEnchantments;
+				break;
 			}
-
-			// Select first enchantment
-			List<EnchantmentLevelEntry> selectedEnchantments = Lists.newArrayList();
 			Weighting.getRandom(random, possibleEnchantments).ifPresent(selectedEnchantments::add);
+			finalLevel /= 2;
+		}
 
-			// Iteratively add more enchantments until we run out or get unlucky
-			int remainingLevel = finalLevel;
-			while (random.nextInt(50) < (remainingLevel + 1)) {
-				// I don't think we need to check for emptiness here because the iterator will just return immediately
-				EnchantmentHelper.removeConflicts(possibleEnchantments, selectedEnchantments.getLast());
-				if (possibleEnchantments.isEmpty()) {
-					break;
-				}
-				Weighting.getRandom(random, possibleEnchantments).ifPresent(selectedEnchantments::add);
-				remainingLevel /= 2;
-			}
-
-			return selectedEnchantments;
-		});
+		return selectedEnchantments;
 	}
 }

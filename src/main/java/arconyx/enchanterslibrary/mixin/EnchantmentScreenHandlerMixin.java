@@ -97,7 +97,7 @@ public abstract class EnchantmentScreenHandlerMixin {
         log.debug("Checking block at {}", powerBlockPos);
 		BlockEntity powerBlockEntity = world.getBlockEntity(powerBlockPos);
 		if (powerBlockEntity instanceof ChiseledBookshelfBlockEntity bookshelf) {
-			int filledSlots = bookshelf.size() - bookshelf.getOpenSlotCount();
+			int filledSlots = bookshelf.getOpenSlotCount();
 			int power = filledSlots / 3;
 			log.debug("Power at {} is {} (from {} filled slots)", powerBlockPos, power, filledSlots);
 			// we reduce the power by one because EnchantmentScreenHandler adds 1 inside the loop

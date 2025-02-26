@@ -136,6 +136,12 @@ public abstract class EnchantmentScreenHandlerMixin {
 		return original.call(stack, slot, level * 3 / 2);
 	}
 
+	/**
+	 * Returns a stream of values representing all the enchantment/level pairs on items on this bookshelf
+	 *
+	 * @param bookshelf a ChiseledBookshelfBlockEntity
+	 * @return stream of map entries with enchantment as the key and level as the value
+	 */
 	@Unique
 	private Stream<Map.Entry<Enchantment, Integer>> getEnchantmentsAtBlock(ChiseledBookshelfBlockEntity bookshelf) {
 		return IntStream.range(0, bookshelf.size())

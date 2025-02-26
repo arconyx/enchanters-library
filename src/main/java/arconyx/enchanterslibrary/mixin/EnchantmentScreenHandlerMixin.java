@@ -31,13 +31,13 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Mixin(EnchantmentScreenHandler.class)
-public abstract class EnchantingScreenHandlerMixin {
+public abstract class EnchantmentScreenHandlerMixin {
 	@Shadow
 	@Final
 	private ScreenHandlerContext context;
 
 	@Unique
-	private static final Logger log = LoggerFactory.getLogger(EnchantingScreenHandlerMixin.class);
+	private static final Logger log = LoggerFactory.getLogger(EnchantmentScreenHandlerMixin.class);
 
 	/**
 	 * Update the running total of bookshelves in range of an enchanting table.

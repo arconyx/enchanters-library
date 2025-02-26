@@ -4,6 +4,8 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
 import net.minecraft.util.collection.Weight;
 
+import java.util.Map;
+
 public class WeightedEnchantmentLevelEntry extends EnchantmentLevelEntry {
     private final Weight weight;
 
@@ -13,12 +15,19 @@ public class WeightedEnchantmentLevelEntry extends EnchantmentLevelEntry {
     }
 
     public WeightedEnchantmentLevelEntry(EnchantmentLevelEntry entry, int weight) {
-        super(entry.enchantment, entry.level);
-        this.weight = Weight.of(weight);
+        this(entry.enchantment, entry.level, weight);
+    }
+
+    public WeightedEnchantmentLevelEntry(Map.Entry<Enchantment, Integer> entry, int weight) {
+        this(entry.getKey(), entry.getValue(), weight);
     }
 
     @Override
     public Weight getWeight() {
         return this.weight;
+    }
+
+    public Enchantment getEnchantment() {
+        return this.enchantment;
     }
 }

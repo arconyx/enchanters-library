@@ -8,8 +8,10 @@ import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.EnchantingTableBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.ChiseledBookshelfBlockEntity;
+import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.EnchantmentScreenHandler;
@@ -34,6 +36,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -44,10 +48,12 @@ public abstract class EnchantmentScreenHandlerMixin {
 	private ScreenHandlerContext context;
 
 	@Unique
-	private static final Logger log = LoggerFactory.getLogger(EnchantmentScreenHandlerMixin.class);
-
+	private final List<Map.Entry<Enchantment, Integer>> nearbyEnchantments = new ArrayList<>();
 	@Unique
-	private final List<EnchantmentLevelEntry> nearbyEnchantments = new ArrayList<>();
+	private static final Logger log = LoggerFactory.getLogger(EnchantmentScreenHandlerMixin.class);
+	@Shadow
+	@Final
+	private Inventory inventory;
 
 	/**
 	 * Reset the nearby enchantments list before {@link EnchantmentScreenHandlerMixin#modifyPower(int, ItemStack, World, BlockPos, BlockPos)}
@@ -141,11 +147,10 @@ public abstract class EnchantmentScreenHandlerMixin {
 	}
 
 	@Unique
-	private Stream<EnchantmentLevelEntry> getEnchantmentsAtBlock(ChiseledBookshelfBlockEntity bookshelf) {
+	private Stream<Map.Entry<Enchantment, Integer>> getEnchantmentsAtBlock(ChiseledBookshelfBlockEntity bookshelf) {
 		return IntStream.range(0, bookshelf.size())
 				.mapToObj(bookshelf::getStack)
-				.flatMap(itemStack -> EnchantmentHelper.get(itemStack).entrySet().stream())
-				.map(enchantmentLevelPair -> new EnchantmentLevelEntry(enchantmentLevelPair.getKey(), enchantmentLevelPair.getValue()));
+				.flatMap(itemStack -> EnchantmentHelper.get(itemStack).entrySet().stream());
 	}
 
 	/**
@@ -187,18 +192,25 @@ public abstract class EnchantmentScreenHandlerMixin {
 
 		List<EnchantmentLevelEntry> possibleEnchantments = EnchantmentHelper.getPossibleEntries(finalLevel, stack, treasureAllowed);
 
-		// THIS IS WHERE WE INSERT CUSTOM STUFF
-		// REMEMBER TO CHECK ENCHANTMENTS FOR COMPATIBILITY
+		// This is the custom stuff
 
-		// TODO: We might have some problems with equals not being defined for EnchantmentLevelEntry
-		List<WeightedEnchantmentLevelEntry> additionalEnchantments = this.nearbyEnchantments.stream()
-				// It might be more efficient to apply the filter when constructing the initial list
-				// But this seems cleaner
-				.filter(enchantmentLevelEntry -> enchantmentLevelEntry.enchantment.isAcceptableItem(stack))
-				// count how many times each distinct enchantment/level combination occurs
-				.map(entry -> new WeightedEnchantmentLevelEntry(entry, 1))
-				.toList();
+		// This filters enchantments by compatibility and then counts the number of occurrences of an enchantment/level
+		// pairing. We operate on Map.Entry objects because they have reasonable equality logic defined and EnchantedLevelEntries
+		// don't.
+		// It might be more efficient to apply the filter when constructing the initial list but this seems cleaner
+		var additionalEnchantmentsCount = this.nearbyEnchantments.stream()
+				.filter(enchantmentLevelEntry -> enchantmentLevelEntry.getKey().isAcceptableItem(stack))
+				.collect(Collectors.groupingBy(entry -> entry, Collectors.counting()));
 
+		List<WeightedEnchantmentLevelEntry> additionalEnchantments = additionalEnchantmentsCount.entrySet().stream().map(
+				entry -> new WeightedEnchantmentLevelEntry(entry.getKey(), entry.getValue().intValue())
+		).toList();
+
+		additionalEnchantments.forEach(entry -> {
+			log.debug("Entry has enchantment {} with weight {}", entry.enchantment.getName(entry.level), entry.getWeight());
+		});
+
+		// Add enchantments to possibilities
 		possibleEnchantments.addAll(additionalEnchantments);
 
 		// Done with the custom stuff

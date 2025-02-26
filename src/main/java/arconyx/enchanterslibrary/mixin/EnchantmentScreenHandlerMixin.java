@@ -7,15 +7,18 @@ import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.block.EnchantingTableBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.ChiseledBookshelfBlockEntity;
-import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.EnchantmentScreenHandler;
 import net.minecraft.screen.ScreenHandlerContext;
+import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
+import org.apache.commons.compress.utils.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Final;
@@ -24,9 +27,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -42,7 +45,7 @@ public abstract class EnchantmentScreenHandlerMixin {
 	/**
 	 * Update the running total of bookshelves in range of an enchanting table.
 	 * This is called for block in the region around the table that passes the
-	 * <code>EnchantingTableBlock.canAccessPowerProvider</code> check
+	 * {@link EnchantingTableBlock#canAccessPowerProvider(World, BlockPos, BlockPos)} check
 	 *
 	 * @param power     the current value of the running total variable
 	 * @param world     the world
@@ -115,21 +118,11 @@ public abstract class EnchantmentScreenHandlerMixin {
 	 */
 	@WrapMethod(method = "generateEnchantments")
 	public List<EnchantmentLevelEntry> improveEnchantmentLevel(ItemStack stack, int slot, int level, Operation<List<EnchantmentLevelEntry>> original) {
-		int inflated_level = level * 3 / 2;
-		List<EnchantmentLevelEntry> availableEnchantments = original.call(stack, slot, inflated_level);
-
-		this.context.run((World world, BlockPos tablePosition) -> {
-			var additionalEnchantments = nearbyEnchantments(world, tablePosition); // Consider caching in a class property so we can generate it during onContentChanged
-			additionalEnchantments.forEach(enchantmentLevelPair -> {
-
-			});
-		});
-
-		return availableEnchantments;
+		return original.call(stack, slot, level * 3 / 2);
 	}
 
 	@Unique
-	private Stream<Map.Entry<Enchantment, Integer>> nearbyEnchantments(World world, BlockPos tablePosition) {
+	private Stream<EnchantmentLevelEntry> nearbyEnchantments(World world, BlockPos tablePosition) {
 		var enchantments = EnchantingTableBlock.POWER_PROVIDER_OFFSETS.stream().unordered()
 				.filter(
 						offset -> EnchantingTableBlock.canAccessPowerProvider(world, tablePosition, offset)
@@ -140,7 +133,82 @@ public abstract class EnchantmentScreenHandlerMixin {
 				.flatMap(bookshelf -> IntStream.range(0, bookshelf.size())
 						.mapToObj(bookshelf::getStack)
 						.flatMap(itemStack -> EnchantmentHelper.get(itemStack).entrySet().stream())
-				);
+				).map(enchantmentLevelPair -> new EnchantmentLevelEntry(enchantmentLevelPair.getKey(), enchantmentLevelPair.getValue()));
 		return enchantments;
+	}
+
+	/**
+	 * A reimplementation of the {@link EnchantmentHelper#generateEnchantments(Random, ItemStack, int, boolean)}
+	 * method based on details from the Minecraft wiki. This allows us to modify the list of possible enchantments
+	 * based on contextual information like the world position.
+	 *
+	 * <p>We use a redirect because the original method is static and doesn't have access to the context or other
+	 * class fields.</p>
+	 *
+	 * <p><b>This function must be kept up to date with changes in the vanilla function else behaviour will diverge
+	 * (non-fatally (probably)).</b></p>
+	 *
+	 * @param random          the prng source
+	 * @param stack           the item stack being enchanting
+	 * @param level           the base enchantment level
+	 * @param treasureAllowed are treasure enchantments allowed
+	 * @return a list of the enchantments, with levels, that will be applied to the item
+	 */
+	@Redirect(method = "generateEnchantments", at = @At(value = "INVOKE", target = "Lnet/minecraft/enchantment/EnchantmentHelper;generateEnchantments(Lnet/minecraft/util/math/random/Random;Lnet/minecraft/item/ItemStack;IZ)Ljava/util/List;"))
+	private List<EnchantmentLevelEntry> generateEnchantmentsIncludingNearbyBooks(Random random, ItemStack stack, int level, boolean treasureAllowed) {
+		// get item enchantability
+		Item item = stack.getItem();
+		int enchantability = item.getEnchantability();
+		if (enchantability <= 0) {
+			return Lists.newArrayList();
+		}
+		;
+
+		// modify enchantment level based on enchantability
+		int upperBound = enchantability / 4 + 1;
+		int levelWithEnchantability = level + random.nextInt(upperBound) + random.nextInt(upperBound) + 1;
+
+		// find a random enchantment bonus between 0.85 and 1.15
+		// we choose the two part source to match the triangular distribution of the vanilla code.
+		float randomBonusCoefficient = (random.nextFloat() + random.nextFloat() - 1) * 0.15F + 1;
+
+		// apply the bonus and clamp the value to avoid weirdness
+		int finalLevel = MathHelper.clamp(Math.round(levelWithEnchantability * randomBonusCoefficient), 1, Integer.MAX_VALUE);
+
+		List<EnchantmentLevelEntry> possibleEnchantments = EnchantmentHelper.getPossibleEntries(finalLevel, stack, treasureAllowed);
+
+		// THIS IS WHERE WE INSERT CUSTOM STUFF
+		// REMEMBER TO CHECK ENCHANTMENTS FOR COMPATIBILITY
+		this.context.run((World world, BlockPos tablePos) -> {
+			var additionalEnchantments = nearbyEnchantments(world, tablePos);
+
+			additionalEnchantments.forEach(enchantmentLevelPair -> {
+
+			});
+
+			// Done with the custom stuff
+			// If we have no possible enchantments return an empty list
+			if (possibleEnchantments.isEmpty()) {
+				return possibleEnchantments;
+			}
+
+			// Select first enchantment
+			List<EnchantmentLevelEntry> selectedEnchantments = Lists.newArrayList();
+			Weighting.getRandom(random, possibleEnchantments).ifPresent(selectedEnchantments::add);
+
+			// Iteratively add more enchantments until we run out or get unlucky
+			int remainingLevel = finalLevel;
+			while (random.nextInt(50) < (remainingLevel + 1)) {
+				// I don't think we need to check for emptiness here because the iterator will just return immediately
+				EnchantmentHelper.removeConflicts(possibleEnchantments, selectedEnchantments.getLast());
+				if (possibleEnchantments.isEmpty()) {
+					break;
+				}
+				Weighting.getRandom(random, possibleEnchantments).ifPresent(selectedEnchantments::add);
+				remainingLevel /= 2;
+			}
+
+			return selectedEnchantments;
+		});
 	}
 }

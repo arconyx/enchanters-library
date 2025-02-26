@@ -65,6 +65,7 @@ public abstract class EnchantmentScreenHandlerMixin {
 	 * @param blockPos  an offset from the enchanting table
 	 * @return the new value of the running total variable
 	 */
+	@SuppressWarnings("DiscouragedShift") // Yes it's brittle but we need it
 	@ModifyVariable(
 			method = "method_17411",
 			at = @At(

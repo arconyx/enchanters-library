@@ -33,9 +33,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -193,23 +191,13 @@ public abstract class EnchantmentScreenHandlerMixin {
 		// REMEMBER TO CHECK ENCHANTMENTS FOR COMPATIBILITY
 
 		// TODO: We might have some problems with equals not being defined for EnchantmentLevelEntry
-		Map<EnchantmentLevelEntry, Integer> additionalEnchantmentCounts = new HashMap<>();
-		this.nearbyEnchantments.stream()
+		List<WeightedEnchantmentLevelEntry> additionalEnchantments = this.nearbyEnchantments.stream()
 				// It might be more efficient to apply the filter when constructing the initial list
 				// But this seems cleaner
 				.filter(enchantmentLevelEntry -> enchantmentLevelEntry.enchantment.isAcceptableItem(stack))
 				// count how many times each distinct enchantment/level combination occurs
-				.forEach(entry -> {
-					int old = additionalEnchantmentCounts.getOrDefault(entry, 0);
-					additionalEnchantmentCounts.replace(entry, old + 1);
-				});
-
-		List<WeightedEnchantmentLevelEntry> additionalEnchantments = additionalEnchantmentCounts.entrySet().stream()
-				.map(entryCountPair -> new WeightedEnchantmentLevelEntry(
-								entryCountPair.getKey(),
-								entryCountPair.getValue()
-						)
-				).toList();
+				.map(entry -> new WeightedEnchantmentLevelEntry(entry, 1))
+				.toList();
 
 		possibleEnchantments.addAll(additionalEnchantments);
 

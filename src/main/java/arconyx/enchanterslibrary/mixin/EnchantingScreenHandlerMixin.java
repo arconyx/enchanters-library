@@ -4,25 +4,37 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import net.minecraft.block.EnchantingTableBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.ChiseledBookshelfBlockEntity;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.EnchantmentScreenHandler;
+import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 @Mixin(EnchantmentScreenHandler.class)
 public abstract class EnchantingScreenHandlerMixin {
+	@Shadow
+	@Final
+	private ScreenHandlerContext context;
 
 	@Unique
 	private static final Logger log = LoggerFactory.getLogger(EnchantingScreenHandlerMixin.class);
@@ -103,6 +115,32 @@ public abstract class EnchantingScreenHandlerMixin {
 	 */
 	@WrapMethod(method = "generateEnchantments")
 	public List<EnchantmentLevelEntry> improveEnchantmentLevel(ItemStack stack, int slot, int level, Operation<List<EnchantmentLevelEntry>> original) {
-		return original.call(stack, slot, level * 3 / 2);
+		int inflated_level = level * 3 / 2;
+		List<EnchantmentLevelEntry> availableEnchantments = original.call(stack, slot, inflated_level);
+
+		this.context.run((World world, BlockPos tablePosition) -> {
+			var additionalEnchantments = nearbyEnchantments(world, tablePosition); // Consider caching in a class property so we can generate it during onContentChanged
+			additionalEnchantments.forEach(enchantmentLevelPair -> {
+
+			});
+		});
+
+		return availableEnchantments;
+	}
+
+	@Unique
+	private Stream<Map.Entry<Enchantment, Integer>> nearbyEnchantments(World world, BlockPos tablePosition) {
+		var enchantments = EnchantingTableBlock.POWER_PROVIDER_OFFSETS.stream().unordered()
+				.filter(
+						offset -> EnchantingTableBlock.canAccessPowerProvider(world, tablePosition, offset)
+				)
+				.map(blockPos -> world.getBlockEntity(tablePosition.add(blockPos)))
+				.filter(ChiseledBookshelfBlockEntity.class::isInstance)
+				.map(ChiseledBookshelfBlockEntity.class::cast)
+				.flatMap(bookshelf -> IntStream.range(0, bookshelf.size())
+						.mapToObj(bookshelf::getStack)
+						.flatMap(itemStack -> EnchantmentHelper.get(itemStack).entrySet().stream())
+				);
+		return enchantments;
 	}
 }

@@ -11,11 +11,9 @@ import net.minecraft.block.entity.ChiseledBookshelfBlockEntity;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.EnchantmentScreenHandler;
-import net.minecraft.screen.ScreenHandlerContext;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.BlockPos;
@@ -24,9 +22,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -43,17 +39,10 @@ import java.util.stream.Stream;
 
 @Mixin(EnchantmentScreenHandler.class)
 public abstract class EnchantmentScreenHandlerMixin {
-	@Shadow
-	@Final
-	private ScreenHandlerContext context;
-
 	@Unique
 	private final List<Map.Entry<Enchantment, Integer>> nearbyEnchantments = new ArrayList<>();
 	@Unique
 	private static final Logger log = LoggerFactory.getLogger(EnchantmentScreenHandlerMixin.class);
-	@Shadow
-	@Final
-	private Inventory inventory;
 
 	/**
 	 * Reset the nearby enchantments list before {@link EnchantmentScreenHandlerMixin#modifyPower(int, ItemStack, World, BlockPos, BlockPos)}
@@ -206,9 +195,7 @@ public abstract class EnchantmentScreenHandlerMixin {
 				entry -> new WeightedEnchantmentLevelEntry(entry.getKey(), entry.getValue().intValue())
 		).toList();
 
-		additionalEnchantments.forEach(entry -> {
-			log.debug("Entry has enchantment {} with weight {}", entry.enchantment.getName(entry.level), entry.getWeight());
-		});
+		additionalEnchantments.forEach(entry -> log.debug("Entry has enchantment {} with weight {}", entry.enchantment.getName(entry.level), entry.getWeight()));
 
 		// Add enchantments to possibilities
 		possibleEnchantments.addAll(additionalEnchantments);

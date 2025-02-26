@@ -14,10 +14,6 @@ public class WeightedEnchantmentLevelEntry extends EnchantmentLevelEntry {
         this.weight = Weight.of(weight);
     }
 
-    public WeightedEnchantmentLevelEntry(EnchantmentLevelEntry entry, int weight) {
-        this(entry.enchantment, entry.level, weight);
-    }
-
     public WeightedEnchantmentLevelEntry(Map.Entry<Enchantment, Integer> entry, int weight) {
         this(entry.getKey(), entry.getValue(), weight);
     }
@@ -25,9 +21,5 @@ public class WeightedEnchantmentLevelEntry extends EnchantmentLevelEntry {
     @Override
     public Weight getWeight() {
         return this.weight;
-    }
-
-    public Enchantment getEnchantment() {
-        return this.enchantment;
     }
 }

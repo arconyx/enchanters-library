@@ -1,5 +1,6 @@
 package arconyx.enchanterslibrary.mixin;
 
+import arconyx.enchanterslibrary.AugmentedEnchantingScreen;
 import arconyx.enchanterslibrary.WeightedEnchantmentLevelEntry;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -11,15 +12,17 @@ import net.minecraft.block.entity.ChiseledBookshelfBlockEntity;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.EnchantmentLevelEntry;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.screen.EnchantmentScreenHandler;
+import net.minecraft.screen.*;
 import net.minecraft.util.Util;
 import net.minecraft.util.collection.Weighting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
@@ -38,11 +41,27 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Mixin(EnchantmentScreenHandler.class)
-public abstract class EnchantmentScreenHandlerMixin {
+public abstract class EnchantmentScreenHandlerMixin extends ScreenHandler implements AugmentedEnchantingScreen {
 	@Unique
 	private final List<Map.Entry<Enchantment, Integer>> nearbyEnchantments = new ArrayList<>();
 	@Unique
 	private static final Logger log = LoggerFactory.getLogger(EnchantmentScreenHandlerMixin.class);
+	@Unique
+	private final int[] bookshelves = new int[1];
+
+	protected EnchantmentScreenHandlerMixin(@Nullable ScreenHandlerType<?> type, int syncId) {
+		super(type, syncId);
+	}
+
+	@Inject(method = "<init>(ILnet/minecraft/entity/player/PlayerInventory;Lnet/minecraft/screen/ScreenHandlerContext;)V", at = @At("TAIL"))
+	public void addSlot(int syncId, PlayerInventory playerInventory, ScreenHandlerContext context, CallbackInfo ci) {
+		this.addProperty(Property.create(this.bookshelves, 0));
+	}
+
+	@Override
+	public int enchanters_library$getBookshelves() {
+		return this.bookshelves[0];
+	}
 
 	/**
 	 * Reset the nearby enchantments list before {@link EnchantmentScreenHandlerMixin#modifyPower(int, ItemStack, World, BlockPos, BlockPos)}
@@ -84,7 +103,7 @@ public abstract class EnchantmentScreenHandlerMixin {
 	// Used for debug logging
 	@WrapOperation(method = "method_17411", at = @At(value = "INVOKE", target = "Lnet/minecraft/enchantment/EnchantmentHelper;calculateRequiredExperienceLevel(Lnet/minecraft/util/math/random/Random;IILnet/minecraft/item/ItemStack;)I"))
 	public int getPower(Random random, int slotIndex, int bookshelfCount, ItemStack stack, Operation<Integer> original) {
-		log.debug("Final bookshelf count is {}", bookshelfCount);
+		this.bookshelves[0] = bookshelfCount;
 		return original.call(random, slotIndex, bookshelfCount, stack);
 	}
 
